@@ -1,6 +1,7 @@
 # TripPlanner AI (MVP)
 
-This repository contains a lightweight MVP for **TripPlanner AI** that mirrors the architecture described in the specification: a TypeScript/Express backend with mocked data and AI-inspired recommendations. The backend exposes endpoints for authentication, itinerary management, recommendations, place search, sharing, and simple weather/event stubs.
+This repository contains a lightweight MVP for **TripPlanner AI** that mirrors the architecture described in the specification:
+a TypeScript/Express backend with mocked data and AI-inspired recommendations plus a React/Vite web UI to exercise the workflows.
 
 ## Structure
 
@@ -12,9 +13,16 @@ backend/
     data.ts           # In-memory mock database with seed data
     types.ts          # Shared TypeScript types
     recommendation.ts # Simple scoring and itinerary builder
+frontend/
+  src/
+    pages/            # Auth, dashboard, planner, itinerary detail screens
+    components/       # Shared UI widgets and planners
+    api/client.ts     # Axios instance configured for the backend
 ```
 
 ## Getting Started
+
+### Backend
 
 ```bash
 cd backend
@@ -25,7 +33,17 @@ npm run dev
 
 The API will start on `http://localhost:3001` (or the `PORT` from your `.env`).
 
-### Key Endpoints
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+By default the UI points to `http://localhost:3001`. Override with `VITE_API_BASE_URL` if needed.
+
+## Key Endpoints
 
 - `POST /api/auth/signup` — create a user and receive a JWT
 - `POST /api/auth/login` — authenticate demo or created users
