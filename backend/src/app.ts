@@ -1,7 +1,15 @@
 import express from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
-import { Activity, Itinerary, TravelPreferences } from './types.js';
+import {
+  Activity,
+  DashboardActivity,
+  DashboardOverview,
+  DashboardWelcome,
+  Itinerary,
+  RecommendedTrip,
+  TravelPreferences
+} from './types.js';
 import {
   createItinerary,
   createUser,
@@ -35,6 +43,72 @@ function auth(req: AuthedRequest, res: express.Response, next: express.NextFunct
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', message: 'TripPlanner API running' });
+});
+
+app.get('/api/dashboard/overview', auth, (req: AuthedRequest, res) => {
+  const user = users.find((u) => u.id === req.userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const userTrips = itineraries.filter((it) => it.userId === req.userId);
+  const uniqueDestinations = new Set(userTrips.map((itinerary) => itinerary.destination.toLowerCase())).size;
+  const totalDaysPlanned = userTrips.reduce((sum, itinerary) => {
+    const start = new Date(itinerary.startDate);
+    const end = new Date(itinerary.endDate);
+    const days = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+    return sum + days;
+  }, 0);
+
+  const stats: DashboardOverview['stats'] = [
+    { label: 'Trips planned', value: userTrips.length, helper: 'Saved itineraries ready to edit' },
+    {
+      label: 'Destinations covered',
+      value: uniqueDestinations,
+      helper: uniqueDestinations === 1 ? 'City in progress' : 'Cities you are tracking'
+    },
+    {
+      label: 'Avg. trip length',
+      value: userTrips.length ? Math.round(totalDaysPlanned / userTrips.length) : 0,
+      helper: 'Days per itinerary'
+    },
+    {
+      label: 'Activities mapped',
+      value: userTrips.reduce((sum, itinerary) => sum + itinerary.activities.flatMap((d) => d.items).length, 0),
+      helper: 'Stops across all trips'
+    }
+  ];
+
+  const interest = user.preferences?.interests?.[0] ?? 'curious traveler';
+  const travelPace = user.preferences?.travelPace ?? 'moderate';
+  const budget = user.preferences?.budget ?? 'medium';
+
+  const welcome: DashboardWelcome = {
+    headline: `Welcome back, ${user.name.split(' ')[0]}`,
+    subhead: `You prefer ${travelPace} pacing with a ${budget} budget focus`,
+    tip: `We are highlighting ${interest} friendly activities in your top destinations.`
+  };
+
+  const scored = [...places].sort((a, b) => scorePlace(b, user.preferences) - scorePlace(a, user.preferences));
+  const recommendedTrips: RecommendedTrip[] = scored.slice(0, 3).map((place, idx) => ({
+    id: place.id,
+    title: `${place.destination} ${place.category === 'tour' ? 'Discovery' : 'Escape'}`,
+    destination: place.destination,
+    description: `AI-curated highlights featuring ${place.name} plus ${travelPace} pacing picks for ${interest}.`,
+    days: 3 + idx,
+    aiConfidence: Math.min(0.82 + idx * 0.05, 0.97),
+    tags: place.tags
+  }));
+
+  const recentActivity: DashboardActivity[] = userTrips
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .slice(0, 5)
+    .map((itinerary) => ({
+      id: itinerary.id,
+      title: itinerary.destination,
+      subtitle: `${itinerary.status === 'confirmed' ? 'Confirmed' : 'Draft'} • ${itinerary.startDate} - ${itinerary.endDate}`,
+      timestamp: itinerary.createdAt.toISOString(),
+      status: itinerary.status
+    }));
+
+  res.json({ stats, recommendedTrips, welcome, recentActivity });
 });
 
 app.post('/api/auth/signup', (req, res) => {
@@ -167,8 +241,8 @@ app.post('/api/itineraries/:id/comments', (_req, res) => {
   res.status(201).json({ message: 'Comment recorded for MVP' });
 });
 
-app.post('/api/itineraries/:id/export', (req, res) => {
-  const itinerary = itineraries.find((it) => it.id === req.params.id);
+app.post('/api/itineraries/:id/export', auth, (req: AuthedRequest, res) => {
+  const itinerary = itineraries.find((it) => it.id === req.params.id && it.userId === req.userId);
   if (!itinerary) return res.status(404).json({ error: 'Not found' });
   res.json({
     calendarUrl: `https://calendar.google.com/${itinerary.id}`,

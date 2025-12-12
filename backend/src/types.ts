@@ -49,3 +49,40 @@ export type Place = {
   priceLevel: 'low' | 'medium' | 'high';
   tags: string[];
 };
+
+export type DashboardStat = {
+  label: string;
+  value: number;
+  helper?: string;
+};
+
+export type DashboardActivity = {
+  id: string;
+  title: string;
+  subtitle: string;
+  timestamp: string;
+  status: 'draft' | 'confirmed';
+};
+
+export type DashboardWelcome = {
+  headline: string;
+  subhead: string;
+  tip: string;
+};
+
+export type RecommendedTrip = {
+  id: string;
+  title: string;
+  destination: string;
+  description: string;
+  days: number;
+  aiConfidence: number;
+  tags: string[];
+};
+
+export type DashboardOverview = {
+  stats: DashboardStat[];
+  recommendedTrips: RecommendedTrip[];
+  welcome: DashboardWelcome;
+  recentActivity: DashboardActivity[];
+};
