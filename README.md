@@ -38,6 +38,8 @@ The API will start on `http://localhost:3001` (or the `PORT` from your `.env`).
 ```bash
 cd frontend
 npm install
+cp .env.example .env # optional; set VITE_API_BASE_URL
+
 npm run dev
 ```
 
